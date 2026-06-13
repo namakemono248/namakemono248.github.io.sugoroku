@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>凄録（スゴロク） - 記録</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
+        /* アプリ名・ユーザー名表示エリア */
+        .title-banner {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        .change-name-btn {
+            font-size: 12px;
+            margin-left: 8px;
+            cursor: pointer;
+            background: none;
+            border: 1px solid #000;
+            border-radius: 4px;
+            padding: 2px 6px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background-color: #ffffff;
+            border: 6px solid #000000;
+            border-radius: 12px;
+            padding: 24px;
+            box-sizing: border-box;
+            position: relative;
+            box-shadow: 8px 8px 0px #000000;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .date-picker {
+            border: 3px solid #000000;
+            padding: 6px 12px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #ffffff;
+            cursor: pointer;
+        }
+
+        .nav-button {
+            border: 3px solid #000000;
+            background-color: #ffffff;
+            padding: 6px 16px;
+            font-size: 18px;
+            font-weight: bold;
+            text-decoration: none;
+            color: #000000;
+            cursor: pointer;
+        }
+        .nav-button:hover { background-color: #f0f0f0; }
+
+        .comment-area {
+            width: 100%;
+            height: 180px;
+            border: 6px solid #000000;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 18px;
+            box-sizing: border-box;
+            resize: none;
+            margin-bottom: 24px;
+        }
+        .comment-area:focus { outline: none; background-color: #fffdf0; }
+
+        .status-container {
+            display: flex;
+            border: 6px solid #000000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .status-btn {
+            flex: 1;
+            border: none;
+            border-right: 3px solid #000000;
+            padding: 16px 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #000000;
+            text-align: center;
+        }
+        .status-btn:last-child { border-right: none; }
+        .status-btn:hover { opacity: 0.9; }
+        .status-btn:active { transform: scale(0.95); }
+
+        .btn-very-good { background-color: #ff8c00; }
+        .btn-good      { background-color: #ffb74d; }
+        .btn-so-so     { background-color: #ffe0b2; }
+        .btn-normal    { background-color: #ffffff; }
+        .btn-bad-hint  { background-color: #c5cae9; }
+        .btn-bad       { background-color: #5c6bc0; color: #ffffff; }
+        .btn-very-bad  { background-color: #1a237e; color: #ffffff; }
+    </style>
+</head>
+<body>
+
+    <div class="title-banner">
+        🎲 <span id="userNameDisplay">ゲスト</span> の『凄録』
+        <button class="change-name-btn" onclick="askUserName(true)">名前変更</button>
+    </div>
+
+    <div class="container">
+        <div class="header-actions">
+            <input type="date" id="dateInput" class="date-picker">
+            <a href="board.html" class="nav-button">スゴロクへ ＞</a>
+        </div>
+
+        <textarea id="commentInput" class="comment-area" placeholder="コメントを入力"></textarea>
+
+        <div class="status-container">
+            <button class="status-btn btn-very-good" onclick="saveRecord('very-good')">かなりできた</button>
+            <button class="status-btn btn-good"      onclick="saveRecord('good')">できた</button>
+            <button class="status-btn btn-so-so"     onclick="saveRecord('so-so')">すこしでき</button>
+            <button class="status-btn btn-normal"    onclick="saveRecord('normal')">ふつう</button>
+            <button class="status-btn btn-bad-hint"  onclick="saveRecord('bad-hint')">すこし失敗</button>
+            <button class="status-btn btn-bad"       onclick="saveRecord('bad')">失敗</button>
+            <button class="status-btn btn-very-bad"  onclick="saveRecord('very-bad')">かなり失敗</button>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            // 今日の日付をセット
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateInput').value = today;
+
+            // ユーザー名のチェック
+            askUserName(false);
+        };
+
+        // ユーザー名を確認・登録する関数
+        function askUserName(isForceChange) {
+            let storedName = localStorage.getItem('sugoroku_username');
+
+            // 名前が未登録、または「名前変更」ボタンが押された場合
+            if (!storedName || isForceChange) {
+                const defaultPrompt = storedName || "プレイヤー1";
+                let name = prompt("ユーザーネームを登録してください：", defaultPrompt);
+                
+                if (name && name.trim() !== "") {
+                    localStorage.setItem('sugoroku_username', name.trim());
+                    storedName = name.trim();
+                } else if (!storedName) {
+                    // キャンセルされたり空欄ならデフォルト名にする
+                    localStorage.setItem('sugoroku_username', "プレイヤー1");
+                    storedName = "プレイヤー1";
+                }
+            }
+            
+            // 画面の表示を更新
+            document.getElementById('userNameDisplay').textContent = storedName;
+        }
+
+        // 記録保存関数
+        function saveRecord(statusType) {
+            const date = document.getElementById('dateInput').value;
+            const comment = document.getElementById('commentInput').value;
+
+            if (!comment.trim()) {
+                alert('コメントを入力してください！');
+                return;
+            }
+
+            const newRecord = { date, comment, status: statusType };
+            let currentRecords = JSON.parse(localStorage.getItem('sugoroku_records')) || [];
+            
+            const existingIndex = currentRecords.findIndex(r => r.date === date);
+            if (existingIndex !== -1) {
+                currentRecords[existingIndex] = newRecord;
+            } else {
+                currentRecords.push(newRecord);
+            }
+
+            currentRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
+            localStorage.setItem('sugoroku_records', JSON.stringify(currentRecords));
+
+            alert(`「${date}」の記録を保存しました！`);
+            document.getElementById('commentInput').value = '';
+        }
+    </script>
+</body>
+</html>
