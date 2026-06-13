@@ -32,7 +32,7 @@
             box-sizing: border-box;
             box-shadow: 8px 8px 0px #000000;
             display: flex;
-            flex-direction: column; /* 上から下に要素（行）が並ぶ */
+            flex-direction: column;
         }
 
         .header-actions {
@@ -75,12 +75,17 @@
             cursor: pointer;
             transition: transform 0.2s;
         }
-        .grid-cell:hover {
+        /* マスが透明のときは枠線も消して非表示にする */
+        .grid-cell.invisible {
+            border-color: transparent;
+            cursor: default;
+            pointer-events: none;
+        }
+        .grid-cell:not(.invisible):hover {
             transform: scale(1.05);
             z-index: 10;
         }
 
-        /* スタートマスの特別な見た目 */
         .status-start {
             background-color: #ffeb3b;
             color: #000000;
@@ -94,20 +99,6 @@
         .status-bad-hint  { background-color: #c5cae9; color: #000000; }
         .status-bad       { background-color: #5c6bc0; color: #ffffff; }
         .status-very-bad  { background-color: #1a237e; color: #ffffff; }
-        .status-empty     { background-color: #e0e0e0; color: #9e9e9e; border-style: dashed; }
-
-        .cell-date {
-            font-size: 12px;
-            margin-bottom: 4px;
-            border-bottom: 1px solid currentColor;
-        }
-        .cell-comment {
-            font-size: 11px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
     </style>
 </head>
 <body>
@@ -139,7 +130,7 @@
                 'very-bad': 1
             };
 
-            // 1. スタートマス「S」を配列の先頭に固定で用意する
+            // スタートマス「S」を先頭に用意
             let finalCellsData = [{
                 dateLabel: "START",
                 comment: "🏁 S",
@@ -150,7 +141,7 @@
             
             let lastProcessedDate = ""; 
 
-            // 2. データをマスの配列に展開する
+            // データを配列に展開
             records.forEach(data => {
                 const steps = stepMap[data.status] || 1;
                 let isSameDayCount = (data.date === lastProcessedDate);
@@ -173,23 +164,20 @@
                 }
             });
 
-            // 最低でも15マス（3行分：1行5マス）にする
-            const totalCellsNeeded = Math.max(finalCellsData.length, 15);
-            // 5マスずつ区切るための総行数を計算
+            // 【改善点】未来のダミーマス（??）の追加をやめ、純粋に今あるマスの数だけで行数を計算！
+            const totalCellsNeeded = finalCellsData.length;
             const totalRows = Math.ceil(totalCellsNeeded / 5);
 
-            // 3. 【重要】下から上に登らせるための2次元グリッドの空枠作成
+            // 2次元グリッドの空枠作成
             let grid = [];
             for (let r = 0; r < totalRows; r++) {
                 grid.push(new Array(5).fill(null));
             }
 
-            // 4. クネクネ蛇行（右下からスタートして上へ向かう）のロジックで配置
-            // 蛇行パターン：下から数えて 0行目は右から左、1行目は左から右、2行目は右から左...
+            // クネクネ蛇行配置
             let currentCellIndex = 0;
             for (let r = 0; r < totalRows; r++) {
                 if (r % 2 === 0) {
-                    // 下から数えて偶数行（0, 2, 4...）：右端から左端へ詰める (4, 3, 2, 1, 0)
                     for (let c = 4; c >= 0; c--) {
                         if (currentCellIndex < finalCellsData.length) {
                             grid[r][c] = finalCellsData[currentCellIndex];
@@ -197,7 +185,6 @@
                         currentCellIndex++;
                     }
                 } else {
-                    // 下から数えて奇数行（1, 3, 5...）：左端から右端へ詰める (0, 1, 2, 3, 4)
                     for (let c = 0; c < 5; c++) {
                         if (currentCellIndex < finalCellsData.length) {
                             grid[r][c] = finalCellsData[currentCellIndex];
@@ -207,7 +194,7 @@
                 }
             }
 
-            // 5. HTMLへの描画（HTMLは「上の行」から順に出力する必要があるので、配列を逆順（上から）ループする）
+            // HTMLへの描画（上の行から順に）
             for (let r = totalRows - 1; r >= 0; r--) {
                 const rowDiv = document.createElement('div');
                 rowDiv.className = 'board-row';
@@ -217,7 +204,6 @@
                     const cellData = grid[r][c];
 
                     if (cellData) {
-                        // 記録データまたはSマスがある場合
                         cellDiv.className = `grid-cell status-${cellData.status}`;
                         cellDiv.innerHTML = `
                             <div class="cell-date">${cellData.dateLabel}</div>
@@ -227,12 +213,8 @@
                             alert(`【${cellData.fullDate}】\n\n${cellData.fullComment}`);
                         };
                     } else {
-                        // まだ到達していない未来の空マス
-                        cellDiv.className = 'grid-cell status-empty';
-                        cellDiv.innerHTML = `
-                            <div class="cell-date">??</div>
-                            <div class="cell-comment">これからの未来</div>
-                        `;
+                        // 【ここを工夫！】同じ行のまだデータが入っていない隙間は、見えない透明なマスにしてレイアウトを維持する
+                        cellDiv.className = 'grid-cell invisible';
                     }
                     rowDiv.appendChild(cellDiv);
                 }
