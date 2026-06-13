@@ -1,0 +1,1 @@
+# namakemono248.github.io.sugoroku
